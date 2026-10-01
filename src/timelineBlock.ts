@@ -200,6 +200,8 @@ export class TimelineBlock extends MarkdownRenderChild {
 				color: resolve(color),
 			})),
 			renderCard: (item, el, lod) => this.renderCard(item.id, el, lod),
+			// Shown when hovering an event whose card is hidden: its date and title, as on a card.
+			renderTooltip: (item, el) => this.renderTooltip(item.id, el),
 			theme,
 			colorScheme: doc.body.hasClass("theme-dark") ? "dark" : "light",
 			// Axis labels in Obsidian's language, like the card dates.
@@ -297,18 +299,41 @@ export class TimelineBlock extends MarkdownRenderChild {
 			else this.renderPdfPage(media, attachment!);
 		}
 
-		if (lod === "full") {
-			el.createDiv({
-				cls: "vt-card__date",
-				text: formatTimelineRange(event.start, event.end, moment.locale()),
-			});
-		}
-		const title = el.createDiv({ cls: "vt-card__title" });
+		if (lod === "full") this.renderDate(el, event);
 		// Only a full card's title is a link. A compact card is mostly title, and vertical-timeline
 		// leaves clicks on links alone, so a link there would open the attachment instead of
 		// letting the click select the event and expand its card.
+		this.renderTitle(el, event, attachment, lod === "full");
+		if (lod === "full" && event.description) {
+			const description = el.createDiv({ cls: "vtl-card-description" });
+			for (const paragraph of event.description.split("\n\n")) description.createEl("p", { text: paragraph });
+		}
+
+		if (preview !== "note") return;
+		const { app } = this.host;
+		const previewEl = el.createDiv({ cls: `${NOTE_PREVIEW_CLASS} markdown-rendered` });
+		return renderNotePreview(app, previewEl, attachment!.file!, attachment!.subpath, (linktext, sourcePath, e) => {
+			void app.workspace.openLinkText(linktext, sourcePath, paneTypeForEvent(e));
+		});
+	}
+
+	/** The tooltip of an event whose card is hidden: its date and title. */
+	private renderTooltip(id: string, el: HTMLElement): void {
+		const rendered = this.events.get(id);
+		if (!rendered) return;
+		this.renderDate(el, rendered.event);
+		this.renderTitle(el, rendered.event, rendered.attachment, false);
+	}
+
+	private renderDate(el: HTMLElement, event: TimelineEvent): void {
+		el.createDiv({ cls: "vt-card__date", text: formatTimelineRange(event.start, event.end, moment.locale()) });
+	}
+
+	/** The event's title, after its attachment's icon; with `linked`, a link that opens the attachment. */
+	private renderTitle(el: HTMLElement, event: TimelineEvent, attachment: Attachment | null, linked: boolean): void {
+		const title = el.createDiv({ cls: "vt-card__title" });
 		let titleEl: HTMLElement = title;
-		if (attachment && lod === "full") {
+		if (attachment && linked) {
 			const link = title.createEl("a", { cls: "vtl-card-link", href: attachment.link.target });
 			link.toggleClass("is-unresolved", !attachment.link.external && !attachment.file);
 			if (attachment.kind !== "note") setTooltip(link, attachment.name);
@@ -325,17 +350,6 @@ export class TimelineBlock extends MarkdownRenderChild {
 			setIcon(titleEl.createSpan({ cls: "vtl-card-icon" }), ATTACHMENT_ICONS[attachment.kind]);
 		}
 		titleEl.createSpan({ text: event.title });
-		if (lod === "full" && event.description) {
-			const description = el.createDiv({ cls: "vtl-card-description" });
-			for (const paragraph of event.description.split("\n\n")) description.createEl("p", { text: paragraph });
-		}
-
-		if (preview !== "note") return;
-		const { app } = this.host;
-		const previewEl = el.createDiv({ cls: `${NOTE_PREVIEW_CLASS} markdown-rendered` });
-		return renderNotePreview(app, previewEl, attachment!.file!, attachment!.subpath, (linktext, sourcePath, e) => {
-			void app.workspace.openLinkText(linktext, sourcePath, paneTypeForEvent(e));
-		});
 	}
 
 	/** The most an image is shown at, in pixels: its link's size, else the setting. `undefined`: no limit. */

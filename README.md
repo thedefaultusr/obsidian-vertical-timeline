@@ -27,8 +27,8 @@ The command palette has **Insert timeline** and **Insert empty timeline**.
 
 - **Events** are momentary (a date: a dot) or spanning (a range: a bar).
 - **Cards** show an event's date, title and description. They make room for each other, and shrink
-  and then hide as you zoom out. Click a dot, bar or card to select it: its card is then always
-  shown in full.
+  and then hide as you zoom out. Hover the dot or bar of an event whose card is hidden to see its
+  date and title. Click a dot, bar or card to select it: its card is then always shown in full.
 - **Storylines** are sets of connected events, drawn as a rail from the first event to the last with
   the storyline's title down its side. Click the title to zoom to the storyline. Events without a
   storyline go in the main lane on the left.
