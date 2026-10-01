@@ -10,7 +10,7 @@ export interface ParsedLink {
 	external: boolean;
 	/**
 	 * Height in pixels from an embed's size, as in `![[photo.jpg|200]]`, `![[photo.jpg|300x200]]` or
-	 * `![alt|200](url)`: the image is shown that tall, cropped to fill the card's width.
+	 * `![alt|200](url)`: the most an image is shown at; a taller one is cropped to it.
 	 */
 	height?: number;
 }

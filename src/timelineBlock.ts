@@ -174,7 +174,7 @@ export class TimelineBlock extends MarkdownRenderChild {
 				storyline: event.storyline,
 				color: resolve(event.color),
 				priority: event.priority,
-				estimatedHeight: estimatedHeight(event.description, this.cardPreview(attachment), attachment?.link.height),
+				estimatedHeight: estimatedHeight(event.description, this.cardPreview(attachment), this.imageMaxHeight(attachment)),
 			});
 		}
 
@@ -338,15 +338,20 @@ export class TimelineBlock extends MarkdownRenderChild {
 		});
 	}
 
-	/** A linked image. One that can't be loaded is removed, with `onError` undoing the card's media layout. */
+	/** The most an image is shown at, in pixels: its link's size, else the setting. `undefined`: no limit. */
+	private imageMaxHeight(attachment: Attachment | null): number | undefined {
+		return attachment?.link.height ?? (this.host.settings.imageMaxHeight || undefined);
+	}
+
 	/**
-	 * A linked image: whole, at the card's width, or with a size (`![[photo.jpg|200]]`) a strip that
-	 * tall, cropped to fill.
+	 * A linked image, at the card's full width and its own height, up to its maximum height; a taller
+	 * image is cropped to it, keeping its middle. One that can't be loaded is removed, with `onError`
+	 * undoing the card's media layout.
 	 */
 	private renderImage(media: HTMLElement, attachment: Attachment, onError: () => void): void {
-		const { height } = attachment.link;
-		media.addClass(height ? "vtl-card-media--strip" : "vtl-card-media--image");
-		if (height) media.style.height = `${height}px`;
+		const maxHeight = this.imageMaxHeight(attachment);
+		media.addClass("vtl-card-media--image");
+		if (maxHeight) media.style.setProperty("--vtl-image-max-height", `${maxHeight}px`);
 		media.createEl("img", { attr: { src: attachment.src!, alt: "" } }).addEventListener("error", () => {
 			media.remove();
 			onError();
@@ -461,7 +466,7 @@ function estimatedHeight(description: string, preview: CardPreview | null, media
 		: preview === "note"
 			? ESTIMATED_HEIGHT.note
 			: preview === "image" && mediaHeight
-				? ESTIMATED_HEIGHT.text + mediaHeight
+				? ESTIMATED_HEIGHT.text + Math.min(mediaHeight, ESTIMATED_HEIGHT.media - ESTIMATED_HEIGHT.text)
 				: ESTIMATED_HEIGHT.media;
 	return base + extra;
 }

@@ -6,6 +6,8 @@ export interface TimelineSettings {
 	showMinimap: boolean;
 	density: number;
 	showImages: boolean;
+	/** Pixels; 0 for no limit. A size on the image link (`![[photo.jpg|200]]`) overrides it. */
+	imageMaxHeight: number;
 	showNotePreviews: boolean;
 	showVideos: boolean;
 	showPdfPreviews: boolean;
@@ -20,6 +22,7 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	showMinimap: true,
 	density: 1.25,
 	showImages: true,
+	imageMaxHeight: 400,
 	showNotePreviews: true,
 	showVideos: true,
 	showPdfPreviews: true,
@@ -77,6 +80,22 @@ export class TimelineSettingTab extends PluginSettingTab {
 			"Show the start of a linked note (or the linked heading or block) in its event's card.",
 		);
 		this.toggle("showImages", "Image previews", "Show a linked image at the top of its event's card.");
+
+		new Setting(containerEl)
+			.setName("Image max height")
+			.setDesc(
+				"Taller images are cropped to this height, in pixels, keeping their middle. Leave empty for no " +
+					"limit. A size on the link, as in ![[photo.jpg|200]], overrides it for that image.",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("No limit")
+					.setValue(this.plugin.settings.imageMaxHeight ? String(this.plugin.settings.imageMaxHeight) : "")
+					.onChange((value) => {
+						const height = value.trim() ? parseInt(value, 10) : 0;
+						if (height >= 0) void this.save({ imageMaxHeight: height });
+					}),
+			);
 		this.toggle(
 			"showVideos",
 			"YouTube videos",

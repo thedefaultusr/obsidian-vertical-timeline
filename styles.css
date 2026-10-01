@@ -167,21 +167,17 @@
 	object-fit: cover;
 }
 
-/* An image is shown whole, at the card's width and its own aspect ratio. A very tall one is capped,
-   and shrinks to fit with the background on either side. */
+/* An image always spans the card's width, at its own height. Its maximum height (set inline as
+   --vtl-image-max-height: the link's size, else the setting) caps that, and a taller image is
+   cropped to it, keeping its middle. */
 .vtl-card-media--image {
 	aspect-ratio: auto;
 }
 
 .vtl-card-media--image img {
 	height: auto;
-	max-height: 360px;
-	object-fit: contain;
-}
-
-/* An image with a size (`![[photo.jpg|200]]`): a strip that tall (set inline), cropped to fill. */
-.vtl-card-media--strip {
-	aspect-ratio: auto;
+	max-height: var(--vtl-image-max-height, none);
+	object-position: center;
 }
 
 /* Videos and PDF pages: 16:9, so the card doesn't change height when they load. A page is taller

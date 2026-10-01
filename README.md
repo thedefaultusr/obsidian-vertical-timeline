@@ -102,9 +102,10 @@ card expands it.
 A linked **image**, **YouTube video** or **PDF** fills the top of a full card, edge to edge, above
 the date and title:
 
-- an image is shown whole, at the card's width. A very tall one is shrunk to fit 360px. Give it a
-  size, as you would in a note, to show a strip of that height instead, cropped to fill:
-  `![[photo.jpg|200]]` (200px tall), `![[photo.jpg|300x120]]` (120px tall) or `![alt|200](url)`.
+- an image always spans the card's width, at its own height, up to a maximum height: 400px by
+  default, changeable (or turned off) in settings. A taller image is cropped to it, keeping its
+  middle. Give an image a size, as you would in a note, to set its own maximum: `![[photo.jpg|200]]`
+  (200px), `![[photo.jpg|300x120]]` (120px: the second number is the height) or `![alt|200](url)`.
 - a YouTube video plays in place, in a 16:9 frame. Links to `youtube.com/watch`, `youtu.be`, shorts, live streams and
   embeds all work, and a start time (`t=90`, `t=1m30s`) is kept. The player is removed when the card
   scrolls out of view or collapses, which stops the video.
@@ -142,7 +143,7 @@ Lines that can't be read are listed under the timeline, with the reason.
 
 ## Settings
 
-Height, minimap and card density defaults; note previews, image previews, PDF previews, YouTube videos
+Height, minimap and card density defaults; image max height; note previews, image previews, PDF previews, YouTube videos
 and attachment icons on or off; updating links on rename on or off.
 
 ## Development
