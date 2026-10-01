@@ -1,0 +1,30 @@
+{
+	"name": "obsidian-vertical-timeline",
+	"version": "1.0.0",
+	"description": "Vertical timelines from Markdown code blocks, with rich event cards, storylines, bands and a minimap. Rendered with @defaultusr/vertical-timeline.",
+	"main": "main.js",
+	"private": true,
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc && node esbuild.config.mjs production",
+		"test": "vitest --run",
+		"harness": "node esbuild.config.mjs harness",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [
+		"obsidian",
+		"timeline",
+		"vertical-timeline"
+	],
+	"license": "MIT",
+	"dependencies": {
+		"@defaultusr/vertical-timeline": "^1.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.3",
+		"esbuild": "^0.28.2",
+		"obsidian": "^1.13.1",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.3"
+	}
+}

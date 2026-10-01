@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Vertical timeline harness</title>
+<style>
+body {
+	--background-primary: #ffffff; --background-secondary: #f6f6f6; --background-modifier-border: #e0e0e0;
+	--background-modifier-hover: rgba(0,0,0,0.06); --text-normal: #222; --text-muted: #5c5c5c; --text-faint: #999;
+	--text-accent: #7c3aed; --text-error: #e93147; --interactive-accent: #7c3aed;
+	--color-red: #e93147; --color-orange: #ec7500; --color-yellow: #e0ac00; --color-green: #08b94e;
+	--color-cyan: #00bfbc; --color-blue: #086ddd; --color-purple: #7852ee; --color-pink: #d53984;
+	--font-interface: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; --font-text-size: 16px;
+	--font-ui-smaller: 12px; --font-ui-small: 13px; --font-ui-medium: 15px; --font-semibold: 600; --font-medium: 500;
+	--size-2-1: 2px; --size-2-2: 4px; --size-4-1: 4px; --size-4-2: 8px; --size-4-3: 12px; --size-4-4: 16px;
+	--radius-s: 4px; --radius-m: 8px; --shadow-xs: 0 1px 2px rgba(0,0,0,.1); --shadow-s: 0 2px 8px rgba(0,0,0,.15);
+	--layer-popover: 30; --icon-xs: 14px; --icon-s: 16px; --icon-l: 24px;
+	--background-modifier-border-hover: #d0d0d0; --link-color: #7c3aed; --link-color-hover: #9b6af5; --link-unresolved-color: #7c3aed; --link-unresolved-opacity: 0.7; --cursor-link: pointer;
+	font-family: var(--font-interface); color: var(--text-normal); background: var(--background-primary);
+	max-width: 900px; margin: 24px auto; padding: 0 16px;
+}
+body.theme-dark {
+	--background-primary: #1e1e1e; --background-secondary: #262626; --background-modifier-border: #3a3a3a;
+	--text-normal: #dadada; --text-muted: #a3a3a3; --text-faint: #666; --interactive-accent: #8a5cf5;
+	--background-modifier-border-hover: #4a4a4a; --link-color: #a88bfa; --link-unresolved-color: #a88bfa; --shadow-s: 0 2px 8px rgba(0,0,0,.5);
+}
+button { font: inherit; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--background-modifier-border); background: var(--background-secondary); color: var(--text-normal); cursor: pointer; }
+button.mod-cta { background: var(--interactive-accent); color: white; border: none; }
+button.clickable-icon { padding: 4px; display: inline-flex; }
+.block { margin-bottom: 32px; }
+#log { font: 12px monospace; white-space: pre; color: var(--text-muted); }
+</style>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div id="blocks"></div>
+<div id="log"></div>
+<script src="harness.js"></script>
+</body>
+</html>
