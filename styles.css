@@ -103,6 +103,21 @@
 	text-decoration: underline dashed;
 }
 
+.vtl-card-icon {
+	display: inline-flex;
+	margin-right: var(--size-4-1);
+	vertical-align: -2px;
+}
+
+.vtl-card-icon svg {
+	width: var(--icon-xs);
+	height: var(--icon-xs);
+}
+
+.vt-card--compact .vtl-card-icon {
+	color: var(--text-muted);
+}
+
 .vtl-card-description {
 	margin-top: var(--size-2-2);
 	color: var(--text-muted);

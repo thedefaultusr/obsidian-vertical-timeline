@@ -67,8 +67,10 @@ URL. Wikilinks (`[[note]]`, `[[note#Heading|alias]]`), embeds (`![[photo.jpg]]`)
 (`[doc](files/a.pdf)`, `![](https://…/pic.png)`) all work. A link in the title shows its display
 text; a link in the description is hidden.
 
-The card's title then links to the attachment: click it to open it (Cmd/Ctrl-click or middle-click
-opens a new tab; a note that doesn't exist yet is created). In a full card:
+An icon before the title shows what kind of attachment an event has. In a full card the title is a
+link to the attachment: click it to open it (Cmd/Ctrl-click or middle-click opens a new tab; a note
+that doesn't exist yet is created). In a compact card it isn't, so clicking anywhere on a compact
+card expands it. A full card also shows:
 
 - a linked **note** is previewed: the start of the note, or just the `#heading` / `#^block` you
   linked. Links in the preview work.
@@ -101,8 +103,8 @@ Lines that can't be read are listed under the timeline, with the reason.
 
 ## Settings
 
-Height, minimap and card density defaults; note previews and image cards on or off; updating links
-on rename on or off.
+Height, minimap and card density defaults; note previews, image cards and attachment icons on or
+off; updating links on rename on or off.
 
 ## Development
 

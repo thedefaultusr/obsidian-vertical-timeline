@@ -7,6 +7,7 @@ export interface TimelineSettings {
 	density: number;
 	showImages: boolean;
 	showNotePreviews: boolean;
+	showAttachmentIcons: boolean;
 	updateLinksOnRename: boolean;
 }
 
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	density: 1.25,
 	showImages: true,
 	showNotePreviews: true,
+	showAttachmentIcons: true,
 	updateLinksOnRename: true,
 };
 
@@ -71,6 +73,11 @@ export class TimelineSettingTab extends PluginSettingTab {
 			"Show the start of a linked note (or the linked heading or block) in its event's card.",
 		);
 		this.toggle("showImages", "Image cards", "Show a linked image as the background of its event's card.");
+		this.toggle(
+			"showAttachmentIcons",
+			"Attachment icons",
+			"Prefix the titles of events that link to a note, image, file or URL with an icon.",
+		);
 		this.toggle(
 			"updateLinksOnRename",
 			"Update links on rename",

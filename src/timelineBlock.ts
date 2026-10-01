@@ -5,7 +5,7 @@ import {
 	type TimelineTheme,
 } from "@defaultusr/vertical-timeline";
 import { App, MarkdownRenderChild, moment, setIcon, setTooltip } from "obsidian";
-import { Attachment, openAttachment, paneTypeForEvent, resolveAttachment } from "./attachments";
+import { Attachment, AttachmentKind, openAttachment, paneTypeForEvent, resolveAttachment } from "./attachments";
 import { ColorResolver } from "./colors";
 import { formatTimelineRange, type TimelineDate } from "./dates";
 import { NOTE_PREVIEW_CLASS, renderNotePreview } from "./notePreview";
@@ -18,6 +18,13 @@ export interface TimelineHost {
 	addBlock(block: TimelineBlock): void;
 	removeBlock(block: TimelineBlock): void;
 }
+
+const ATTACHMENT_ICONS: Record<AttachmentKind, string> = {
+	note: "file-text",
+	image: "image",
+	file: "paperclip",
+	url: "globe",
+};
 
 /** Opacity of bands, unless their color has its own alpha. */
 const BAND_OPACITY = 0.15;
@@ -265,9 +272,12 @@ export class TimelineBlock extends MarkdownRenderChild {
 			});
 		}
 		const title = body.createDiv({ cls: "vt-card__title" });
-		if (attachment) {
-			// Not `.internal-link`: Obsidian's reading view handles clicks and hovers on those itself.
-			const link = title.createEl("a", { cls: "vtl-card-link", href: attachment.link.target, text: event.title });
+		// Only a full card's title is a link. A compact card is mostly title, and vertical-timeline
+		// leaves clicks on links alone, so a link there would open the attachment instead of
+		// letting the click select the event and expand its card.
+		let titleEl: HTMLElement = title;
+		if (attachment && lod === "full") {
+			const link = title.createEl("a", { cls: "vtl-card-link", href: attachment.link.target });
 			link.toggleClass("is-unresolved", !attachment.link.external && !attachment.file);
 			if (attachment.kind !== "note") setTooltip(link, attachment.name);
 			const open = (e: MouseEvent) => {
@@ -277,9 +287,12 @@ export class TimelineBlock extends MarkdownRenderChild {
 			};
 			link.addEventListener("click", open);
 			link.addEventListener("auxclick", (e) => e.button === 1 && open(e));
-		} else {
-			title.setText(event.title);
+			titleEl = link;
 		}
+		if (attachment && this.host.settings.showAttachmentIcons) {
+			setIcon(titleEl.createSpan({ cls: "vtl-card-icon" }), ATTACHMENT_ICONS[attachment.kind]);
+		}
+		titleEl.createSpan({ text: event.title });
 		if (lod === "full" && event.description) body.createDiv({ cls: "vtl-card-description", text: event.description });
 
 		if (preview !== "note") return;
