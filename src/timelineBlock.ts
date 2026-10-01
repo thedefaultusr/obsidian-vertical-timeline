@@ -174,7 +174,7 @@ export class TimelineBlock extends MarkdownRenderChild {
 				storyline: event.storyline,
 				color: resolve(event.color),
 				priority: event.priority,
-				estimatedHeight: estimatedHeight(event.description, this.cardPreview(attachment)),
+				estimatedHeight: estimatedHeight(event.description, this.cardPreview(attachment), attachment?.link.height),
 			});
 		}
 
@@ -339,7 +339,14 @@ export class TimelineBlock extends MarkdownRenderChild {
 	}
 
 	/** A linked image. One that can't be loaded is removed, with `onError` undoing the card's media layout. */
+	/**
+	 * A linked image: whole, at the card's width, or with a size (`![[photo.jpg|200]]`) a strip that
+	 * tall, cropped to fill.
+	 */
 	private renderImage(media: HTMLElement, attachment: Attachment, onError: () => void): void {
+		const { height } = attachment.link;
+		media.addClass(height ? "vtl-card-media--strip" : "vtl-card-media--image");
+		if (height) media.style.height = `${height}px`;
 		media.createEl("img", { attr: { src: attachment.src!, alt: "" } }).addEventListener("error", () => {
 			media.remove();
 			onError();
@@ -445,11 +452,17 @@ export class TimelineBlock extends MarkdownRenderChild {
 type CardPreview = "image" | "note" | "video" | "pdf";
 
 /** A guess at a full card's height, from its description and what its attachment shows. */
-function estimatedHeight(description: string, preview: CardPreview | null): number {
+function estimatedHeight(description: string, preview: CardPreview | null, mediaHeight?: number): number {
 	const paragraphs = description ? description.split("\n\n") : [];
 	const lines = paragraphs.flatMap((p) => p.split("\n")).reduce((n, line) => n + Math.ceil(line.length / LINE_CHARS), 0);
 	const extra = Math.max(0, lines - 1) * LINE_HEIGHT + Math.max(0, paragraphs.length - 1) * PARAGRAPH_GAP;
-	const base = !preview ? ESTIMATED_HEIGHT.text : preview === "note" ? ESTIMATED_HEIGHT.note : ESTIMATED_HEIGHT.media;
+	const base = !preview
+		? ESTIMATED_HEIGHT.text
+		: preview === "note"
+			? ESTIMATED_HEIGHT.note
+			: preview === "image" && mediaHeight
+				? ESTIMATED_HEIGHT.text + mediaHeight
+				: ESTIMATED_HEIGHT.media;
 	return base + extra;
 }
 

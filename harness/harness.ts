@@ -5,6 +5,8 @@ import { TimelineBlock, TimelineHost } from "../src/timelineBlock";
 const app = createApp([
 	new TFile("Projects/Atlas.md", "# Project Atlas\n\nKick-off with the **whole** team. Budget lives in [[Budget]].\n\n- Scope agreed\n- Owners assigned\n- Risks logged\n\n## Milestones\n\nShip the first prototype by May, then iterate with the pilot customers until the summer.\n\n## Retro\n\nWent well overall."),
 	new TFile("flat.jpg", "", "flat.svg"),
+	new TFile("wide.png", "", "wide.svg"),
+	new TFile("tall.png", "", "tall.svg"),
 	new TFile("contract.pdf", "", "/test-vault/attachments/contract.pdf", 248_512),
 ]) as any;
 
@@ -60,6 +62,13 @@ const blocks: Record<string, string> = {
 @ [1914~1918] #red WWI
 @ [1939~1945] #rgb(0 0 255 / 30%) WWII`,
 	many: many,
+	images: `> HEIGHT 1600
+- [2000] Wide image | ![[wide.png]]
+- [2001] Tall image | ![[tall.png]]
+- [2002] Regular image | ![[flat.jpg]]
+- [2003] Wide, 120px | ![[wide.png|120]]
+- [2004] Tall, 300x80 | ![[tall.png|300x80]]
+- [2005] Regular, 200px | ![[flat.jpg|200]]`,
 	media: `> HEIGHT 640
 - [1969-07-20] #slategray Apollo 11 | The lunar module Eagle lands in the Sea of Tranquility.
   Armstrong steps out six hours later.

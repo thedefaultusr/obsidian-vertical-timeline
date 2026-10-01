@@ -144,8 +144,7 @@
 	margin-top: var(--size-4-2);
 }
 
-/* Media: an image, YouTube player or PDF page across the top of a full card, edge to edge. All
-   16:9, so a card doesn't change height when its media loads. */
+/* Media: an image, YouTube player or PDF page across the top of a full card, edge to edge. */
 .vertical-timeline .vt-card.vtl-card--media {
 	padding-top: 0;
 	/* Clips the media to the card's rounded corners. */
@@ -168,7 +167,25 @@
 	object-fit: cover;
 }
 
-/* A page is taller than 16:9: its top shows. */
+/* An image is shown whole, at the card's width and its own aspect ratio. A very tall one is capped,
+   and shrinks to fit with the background on either side. */
+.vtl-card-media--image {
+	aspect-ratio: auto;
+}
+
+.vtl-card-media--image img {
+	height: auto;
+	max-height: 360px;
+	object-fit: contain;
+}
+
+/* An image with a size (`![[photo.jpg|200]]`): a strip that tall (set inline), cropped to fill. */
+.vtl-card-media--strip {
+	aspect-ratio: auto;
+}
+
+/* Videos and PDF pages: 16:9, so the card doesn't change height when they load. A page is taller
+   than that: its top shows. */
 .vtl-card-media--pdf img {
 	object-position: top;
 	background: #fff;

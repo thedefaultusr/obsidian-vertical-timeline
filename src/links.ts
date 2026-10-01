@@ -8,6 +8,11 @@ export interface ParsedLink {
 	display: string;
 	/** Whether the target is an external URL rather than a vault path. */
 	external: boolean;
+	/**
+	 * Height in pixels from an embed's size, as in `![[photo.jpg|200]]`, `![[photo.jpg|300x200]]` or
+	 * `![alt|200](url)`: the image is shown that tall, cropped to fill the card's width.
+	 */
+	height?: number;
 }
 
 const WIKILINK_RE = /!?\[\[([^\[\]|]+?)(?:\|([^\[\]]*))?\]\]/g;
@@ -15,6 +20,8 @@ const MDLINK_RE = /!?\[([^\[\]]*)\]\(\s*(<[^<>]+>|[^()\s]+)(?:\s+"[^"]*")?\s*\)/
 /** A bare web address. Trailing punctuation is trimmed off separately. */
 const BARE_URL_RE = /\bhttps?:\/\/[^\s<>()[\]|]+/g;
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
+/** An embed's size: `200` (one number) or `300x200` (width x height). */
+const SIZE_RE = /^(\d+)(?:x(\d+))?$/;
 
 export function isExternalTarget(target: string): boolean {
 	return SCHEME_RE.test(target) && !/^[a-z]:[\\/]/i.test(target);
@@ -39,19 +46,32 @@ export function safeDecode(value: string): string {
 	}
 }
 
+/**
+ * Splits an embed's size off its alias or alt text: `200` → no text, height 200; `alt|300x200` →
+ * `alt`, height 200. Anything else is all text.
+ */
+function splitSize(text: string): { text: string; height?: number } {
+	const bar = text.lastIndexOf("|");
+	const size = SIZE_RE.exec(text.slice(bar + 1).trim());
+	if (!size) return { text };
+	return { text: bar === -1 ? "" : text.slice(0, bar), height: Number(size[2] ?? size[1]) };
+}
+
 /** Finds all links in `text`, in source order. */
 export function findLinks(text: string): (ParsedLink & { index: number })[] {
 	const links: (ParsedLink & { index: number })[] = [];
 
 	for (const match of text.matchAll(WIKILINK_RE)) {
 		const target = match[1].trim();
-		const alias = match[2]?.trim();
+		// Only embeds have a size, as in Obsidian: `[[Year review|2024]]` shows "2024".
+		const { text: alias, height } = match[0].startsWith("!") ? splitSize(match[2] ?? "") : { text: match[2] ?? "" };
 		links.push({
 			raw: match[0],
 			index: match.index!,
 			target,
-			display: alias || defaultLinkDisplay(target),
+			display: alias.trim() || defaultLinkDisplay(target),
 			external: false,
+			height,
 		});
 	}
 
@@ -62,12 +82,14 @@ export function findLinks(text: string): (ParsedLink & { index: number })[] {
 		if (target.startsWith("<")) target = target.slice(1, -1);
 		const external = isExternalTarget(target);
 		if (!external) target = safeDecode(target);
+		const { text: alt, height } = match[0].startsWith("!") ? splitSize(match[1]) : { text: match[1] };
 		links.push({
 			raw: match[0],
 			index: match.index!,
 			target,
-			display: match[1].trim() || (external ? target : defaultLinkDisplay(target)),
+			display: alt.trim() || (external ? target : defaultLinkDisplay(target)),
 			external,
+			height,
 		});
 	}
 

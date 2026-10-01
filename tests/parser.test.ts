@@ -51,6 +51,21 @@ describe("links", () => {
 		]);
 	});
 
+	it("reads an embed's size as the height to show it at", () => {
+		const links = findLinks(
+			"![[a.png|200]] ![[b.png|300x120]] ![[c.png]] [[Year review|2024]] ![x|150](d.png) ![150](e.png) ![alt](f.png)",
+		);
+		expect(links.map((l) => [l.target, l.display, l.height])).toEqual([
+			["a.png", "a.png", 200],
+			["b.png", "b.png", 120],
+			["c.png", "c.png", undefined],
+			["Year review", "2024", undefined],
+			["d.png", "x", 150],
+			["e.png", "e.png", 150],
+			["f.png", "alt", undefined],
+		]);
+	});
+
 	it("finds bare web addresses, but not the ones inside Markdown links", () => {
 		const links = findLinks("Watch https://youtu.be/abc. Or [this](https://e.com/x) and http://e.org/a?b=1, ok");
 		expect(links.map((l) => [l.raw, l.target, l.external])).toEqual([

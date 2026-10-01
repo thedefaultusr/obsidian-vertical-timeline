@@ -99,14 +99,16 @@ link to the attachment: click it to open it (Cmd/Ctrl-click or middle-click open
 that doesn't exist yet is created). In a compact card it isn't, so clicking anywhere on a compact
 card expands it.
 
-A linked **image**, **YouTube video** or **PDF** fills the top of a full card, edge to edge, in a
-16:9 frame above the date and title:
+A linked **image**, **YouTube video** or **PDF** fills the top of a full card, edge to edge, above
+the date and title:
 
-- an image is cropped to fit.
-- a YouTube video plays in place. Links to `youtube.com/watch`, `youtu.be`, shorts, live streams and
+- an image is shown whole, at the card's width. A very tall one is shrunk to fit 360px. Give it a
+  size, as you would in a note, to show a strip of that height instead, cropped to fill:
+  `![[photo.jpg|200]]` (200px tall), `![[photo.jpg|300x120]]` (120px tall) or `![alt|200](url)`.
+- a YouTube video plays in place, in a 16:9 frame. Links to `youtube.com/watch`, `youtu.be`, shorts, live streams and
   embeds all work, and a start time (`t=90`, `t=1m30s`) is kept. The player is removed when the card
   scrolls out of view or collapses, which stops the video.
-- a PDF shows the top of a page: the first, or the one you link to with `[[report.pdf#page=3]]`.
+- a PDF shows the top of a page, in a 16:9 frame: the first, or the one you link to with `[[report.pdf#page=3]]`.
   Pages are drawn with Obsidian's built-in PDF viewer and kept until the file changes.
 
 A linked **note** is previewed below the card's text: the start of the note, or just the
