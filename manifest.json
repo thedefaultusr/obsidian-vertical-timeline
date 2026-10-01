@@ -1,7 +1,7 @@
 {
 	"id": "vertical-timeline",
 	"name": "Vertical Timeline",
-	"version": "1.0.2",
+	"version": "1.1.0",
 	"minAppVersion": "1.5.0",
 	"description": "Vertical timelines from Markdown code blocks, with rich event cards, storylines and a minimap. Attach notes, images and files to events.",
 	"author": "",
