@@ -58,6 +58,9 @@ const blocks: Record<string, string> = {
 @ [1939~1945] #rgb(0 0 255 / 30%) WWII`,
 	many: many,
 };
+// Same source inside the wrappers Live Preview puts code blocks in (an editable region).
+blocks.livePreview = blocks.attachments;
+const LIVE_PREVIEW = new Set(["livePreview"]);
 
 const toggle = document.getElementById("blocks")!.createEl("button", { text: "Toggle dark" });
 const rendered: TimelineBlock[] = [];
@@ -69,7 +72,12 @@ toggle.addEventListener("click", () => {
 for (const [name, source] of Object.entries(blocks)) {
 	const section = document.getElementById("blocks")!.createDiv({ cls: "block" });
 	section.createEl("h3", { text: name });
-	const el = section.createDiv();
+	const el = LIVE_PREVIEW.has(name)
+		? section
+				.createDiv({ cls: "cm-content", attr: { contenteditable: "true" } })
+				.createDiv({ cls: "cm-embed-block", attr: { contenteditable: "false" } })
+				.createDiv()
+		: section.createDiv();
 	const block = new TimelineBlock(host, el, source, "Timelines.md", 10);
 	block.load();
 	rendered.push(block);
