@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-vertical-timeline",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Vertical timelines from Markdown code blocks, with rich event cards, storylines, bands and a minimap. Rendered with @defaultusr/vertical-timeline.",
 	"main": "main.js",
 	"private": true,
