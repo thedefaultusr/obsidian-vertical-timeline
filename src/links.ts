@@ -1,4 +1,4 @@
-/** A link found in timeline item text: `[[note]]`, `![[image.png]]`, `[text](path)` or `![alt](https://…)`. */
+/** A link in timeline text: `[[note]]`, `![[image.png]]`, `[text](path)`, `![alt](https://…)` or a bare `https://…`. */
 export interface ParsedLink {
 	/** The link exactly as written. */
 	raw: string;
@@ -12,6 +12,8 @@ export interface ParsedLink {
 
 const WIKILINK_RE = /!?\[\[([^\[\]|]+?)(?:\|([^\[\]]*))?\]\]/g;
 const MDLINK_RE = /!?\[([^\[\]]*)\]\(\s*(<[^<>]+>|[^()\s]+)(?:\s+"[^"]*")?\s*\)/g;
+/** A bare web address. Trailing punctuation is trimmed off separately. */
+const BARE_URL_RE = /\bhttps?:\/\/[^\s<>()[\]|]+/g;
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
 export function isExternalTarget(target: string): boolean {
@@ -67,6 +69,14 @@ export function findLinks(text: string): (ParsedLink & { index: number })[] {
 			display: match[1].trim() || (external ? target : defaultLinkDisplay(target)),
 			external,
 		});
+	}
+
+	for (const match of text.matchAll(BARE_URL_RE)) {
+		// The address of a Markdown link isn't a link of its own.
+		if (links.some((l) => match.index! >= l.index && match.index! < l.index + l.raw.length)) continue;
+		// A sentence ending in a link: the full stop isn't part of it.
+		const target = match[0].replace(/[.,;:!?'"]+$/, "");
+		links.push({ raw: target, index: match.index!, target, display: target, external: true });
 	}
 
 	return links.sort((a, b) => a.index - b.index);

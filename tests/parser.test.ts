@@ -51,6 +51,15 @@ describe("links", () => {
 		]);
 	});
 
+	it("finds bare web addresses, but not the ones inside Markdown links", () => {
+		const links = findLinks("Watch https://youtu.be/abc. Or [this](https://e.com/x) and http://e.org/a?b=1, ok");
+		expect(links.map((l) => [l.raw, l.target, l.external])).toEqual([
+			["https://youtu.be/abc", "https://youtu.be/abc", true],
+			["[this](https://e.com/x)", "https://e.com/x", true],
+			["http://e.org/a?b=1", "http://e.org/a?b=1", true],
+		]);
+	});
+
 	it("ignores pipes inside wikilinks", () => {
 		expect(indexOutsideWikilinks("Name [[a|b]] | desc", "|")).toBe(13);
 	});
@@ -135,6 +144,57 @@ describe("parseTimeline", () => {
 		]);
 	});
 
+	it("reads descriptions from the indented lines below an event, in paragraphs", () => {
+		const { events, errors } = parse(`
+- [2020] Trip | First paragraph,
+  still the first.
+
+  Second paragraph. [[Itinerary]]
+
+
+      Third,   deeper indented.
+- [2021] No pipe
+    Only continuation lines
+@ [2020~2021] Band
+- [2022] Last | one line
+`);
+		expect(errors).toEqual([]);
+		expect(events.map((e) => [e.title, e.description, e.link?.target])).toEqual([
+			["Trip", "First paragraph,\nstill the first.\n\nSecond paragraph.\n\nThird, deeper indented.", "Itinerary"],
+			["No pipe", "Only continuation lines", undefined],
+			["Last", "one line", undefined],
+		]);
+	});
+
+	it("keeps events apart when the whole block is indented", () => {
+		const { events } = parse(["  - [2020] A | a", "  - [2021] B | b", "    more b"].join("\n"));
+		expect(events.map((e) => [e.title, e.description])).toEqual([
+			["A", "a"],
+			["B", "b\nmore b"],
+		]);
+	});
+
+	it("reads markers: a moment, with optional color, storyline and label", () => {
+		const { markers, storylines, errors } = parse(`
+= [2008-09-15] #tomato {Crisis} Lehman Brothers collapses
+= [2020] {Only markers}   Pandemic
+= [1969-07-20]
+= [2001] #notacolor stays in the label
+= [2000~2001] A range
+= [1999] !2 Priority isn't a marker modifier
+`);
+		expect(markers.map((m) => [m.at.text, m.color, m.storyline, m.label])).toEqual([
+			["2008-09-15", "tomato", "Crisis", "Lehman Brothers collapses"],
+			["2020", undefined, "Only markers", "Pandemic"],
+			["1969-07-20", undefined, undefined, undefined],
+			["2001", undefined, undefined, "#notacolor stays in the label"],
+			["1999", undefined, undefined, "!2 Priority isn't a marker modifier"],
+		]);
+		// A storyline with only markers is still a storyline.
+		expect(storylines.map((s) => s.name)).toEqual(["Crisis", "Only markers"]);
+		expect(errors.map((e) => [e.line, e.message.split(":")[0]])).toEqual([[5, "A marker is a single moment"]]);
+	});
+
 	it("reads flags", () => {
 		const { flags, errors } = parse(`
 > height 250
@@ -184,7 +244,7 @@ describe("parseTimeline", () => {
 - [2020-13] bad month
 - [2024~2020] backwards
 - [2020~2021~2022] two tildes
-= [2020] not a line type
+* [2020] not a line type
 just text
 `);
 		expect(events).toHaveLength(1);

@@ -9,6 +9,7 @@ import { Attachment, AttachmentKind, openAttachment, paneTypeForEvent, resolveAt
 import { ColorResolver } from "./colors";
 import { formatTimelineRange, type TimelineDate } from "./dates";
 import { NOTE_PREVIEW_CLASS, renderNotePreview } from "./notePreview";
+import { pageOf, renderPdfPage } from "./pdfPreview";
 import { parseTimeline, type ParseResult, type TimelineEvent } from "./parser";
 import type { TimelineSettings } from "./settings";
 
@@ -22,6 +23,8 @@ export interface TimelineHost {
 const ATTACHMENT_ICONS: Record<AttachmentKind, string> = {
 	note: "file-text",
 	image: "image",
+	pdf: "file-type",
+	youtube: "play-circle",
 	file: "paperclip",
 	url: "globe",
 };
@@ -29,8 +32,17 @@ const ATTACHMENT_ICONS: Record<AttachmentKind, string> = {
 /** Opacity of bands, unless their color has its own alpha. */
 const BAND_OPACITY = 0.15;
 
-/** Card height guesses by what the card shows, so the first layout is close to the measured one. */
-const ESTIMATED_HEIGHT = { text: 72, image: 200, note: 250 };
+/**
+ * Card height guesses, so the first layout (and when vertical-timeline reveals each card) is close
+ * to the measured one: a card with one line of description, plus what its attachment shows. Media
+ * (an image, video or PDF page) is 16:9 at a typical card width.
+ */
+const ESTIMATED_HEIGHT = { text: 72, media: 300, note: 250 };
+/** Extra height per description line beyond the first, and per paragraph break. */
+const LINE_HEIGHT = 19;
+const PARAGRAPH_GAP = 6;
+/** Characters that fit on a line of a typical card. */
+const LINE_CHARS = 60;
 
 /** Space left around a `> HEIGHT fill` timeline, so the note's edges stay visible. */
 const FILL_MARGIN = 48;
@@ -99,7 +111,7 @@ export class TimelineBlock extends MarkdownRenderChild {
 			this.containerEl.createDiv({ cls: "vtl-empty", text: "Timeline (not shown in previews)" });
 			return;
 		}
-		if (!this.result.events.length && !this.result.bands.length) {
+		if (!this.result.events.length && !this.result.bands.length && !this.result.markers.length) {
 			this.containerEl.createDiv({
 				cls: "vtl-empty",
 				text: "This timeline has no events yet. Add one like: - [2024-05-01] Something happened",
@@ -162,7 +174,7 @@ export class TimelineBlock extends MarkdownRenderChild {
 				storyline: event.storyline,
 				color: resolve(event.color),
 				priority: event.priority,
-				estimatedHeight: ESTIMATED_HEIGHT[this.cardPreview(attachment) ?? "text"],
+				estimatedHeight: estimatedHeight(event.description, this.cardPreview(attachment)),
 			});
 		}
 
@@ -180,6 +192,13 @@ export class TimelineBlock extends MarkdownRenderChild {
 					label: band.label,
 				};
 			}),
+			markers: this.result.markers.map(({ id, at, label, storyline, color }) => ({
+				id,
+				at: at.date,
+				label,
+				storyline,
+				color: resolve(color),
+			})),
 			renderCard: (item, el, lod) => this.renderCard(item.id, el, lod),
 			theme,
 			colorScheme: doc.body.hasClass("theme-dark") ? "dark" : "light",
@@ -199,6 +218,15 @@ export class TimelineBlock extends MarkdownRenderChild {
 		const label = frame.createSpan({ cls: "vtl-sr-only", text: "Timeline" });
 		label.id = `vtl-label-${Math.random().toString(36).slice(2)}`;
 		frame.querySelector(".vt-root")?.setAttribute("aria-labelledby", label.id);
+
+		// Clicking a marker's label zooms in around it, as far as its date is precise.
+		timeline.on("markerclick", (id) => {
+			const marker = this.result.markers.find((m) => m.id === id);
+			if (!marker) return;
+			const at = marker.at.date.getTime();
+			const padding = singleDatePadding(marker.at);
+			timeline.setWindow(at - padding, at + padding);
+		});
 
 		this.chainWheelToNote(frame, timeline);
 		this.renderToolbar(frame);
@@ -224,21 +252,28 @@ export class TimelineBlock extends MarkdownRenderChild {
 	}
 
 	/** What an event's full card shows besides its text, if anything. */
-	private cardPreview(attachment: Attachment | null): "image" | "note" | null {
+	private cardPreview(attachment: Attachment | null): CardPreview | null {
 		const { settings } = this.host;
 		if (attachment?.kind === "image" && attachment.src && settings.showImages) return "image";
 		if (attachment?.kind === "note" && attachment.file && settings.showNotePreviews) return "note";
+		if (attachment?.kind === "youtube" && settings.showVideos) return "video";
+		if (attachment?.kind === "pdf" && attachment.file && settings.showPdfPreviews) return "pdf";
 		return null;
 	}
 
-	/** `> WINDOW`, or all events and bands plus a little padding. */
+	/** `> WINDOW`, or all events, bands and markers plus a little padding. */
 	private initialRange(): [number, number] {
 		const { window: initial } = this.result.flags;
 		if (initial) return [initial.start.date.getTime(), initial.end.date.getTime()];
 
 		let min = Infinity;
 		let max = -Infinity;
-		const dated = [...this.result.events, ...this.result.bands];
+		const { events, bands, markers } = this.result;
+		const dated: { start: TimelineDate; end?: TimelineDate }[] = [
+			...events,
+			...bands,
+			...markers.map(({ at }) => ({ start: at })),
+		];
 		for (const { start, end } of dated) {
 			min = Math.min(min, start.date.getTime());
 			max = Math.max(max, (end ?? start).date.getTime());
@@ -253,25 +288,22 @@ export class TimelineBlock extends MarkdownRenderChild {
 		const { event, attachment } = rendered;
 		const preview = lod === "full" ? this.cardPreview(attachment) : null;
 
-		// An image is the card's background, under the text.
-		let body = el;
-		if (preview === "image") {
-			el.addClass("vtl-card--image");
-			const img = el.createEl("img", { cls: "vtl-card-image", attr: { src: attachment!.src!, alt: "" } });
-			img.addEventListener("error", () => {
-				img.remove();
-				el.removeClass("vtl-card--image");
-			});
-			body = el.createDiv({ cls: "vtl-card-body" });
+		// An image, video or PDF page fills the top of the card, above its text.
+		if (preview && preview !== "note") {
+			el.addClass("vtl-card--media");
+			const media = el.createDiv({ cls: "vtl-card-media" });
+			if (preview === "image") this.renderImage(media, attachment!, () => el.removeClass("vtl-card--media"));
+			else if (preview === "video") this.renderVideo(media, attachment!, event.title);
+			else this.renderPdfPage(media, attachment!);
 		}
 
 		if (lod === "full") {
-			body.createDiv({
+			el.createDiv({
 				cls: "vt-card__date",
 				text: formatTimelineRange(event.start, event.end, moment.locale()),
 			});
 		}
-		const title = body.createDiv({ cls: "vt-card__title" });
+		const title = el.createDiv({ cls: "vt-card__title" });
 		// Only a full card's title is a link. A compact card is mostly title, and vertical-timeline
 		// leaves clicks on links alone, so a link there would open the attachment instead of
 		// letting the click select the event and expand its card.
@@ -293,7 +325,10 @@ export class TimelineBlock extends MarkdownRenderChild {
 			setIcon(titleEl.createSpan({ cls: "vtl-card-icon" }), ATTACHMENT_ICONS[attachment.kind]);
 		}
 		titleEl.createSpan({ text: event.title });
-		if (lod === "full" && event.description) body.createDiv({ cls: "vtl-card-description", text: event.description });
+		if (lod === "full" && event.description) {
+			const description = el.createDiv({ cls: "vtl-card-description" });
+			for (const paragraph of event.description.split("\n\n")) description.createEl("p", { text: paragraph });
+		}
 
 		if (preview !== "note") return;
 		const { app } = this.host;
@@ -301,6 +336,41 @@ export class TimelineBlock extends MarkdownRenderChild {
 		return renderNotePreview(app, previewEl, attachment!.file!, attachment!.subpath, (linktext, sourcePath, e) => {
 			void app.workspace.openLinkText(linktext, sourcePath, paneTypeForEvent(e));
 		});
+	}
+
+	/** A linked image. One that can't be loaded is removed, with `onError` undoing the card's media layout. */
+	private renderImage(media: HTMLElement, attachment: Attachment, onError: () => void): void {
+		media.createEl("img", { attr: { src: attachment.src!, alt: "" } }).addEventListener("error", () => {
+			media.remove();
+			onError();
+		});
+	}
+
+	/** A YouTube player. It's created and destroyed with the card, so it stops when the card scrolls away. */
+	private renderVideo(media: HTMLElement, attachment: Attachment, title: string): void {
+		media.createEl("iframe", {
+			attr: {
+				src: attachment.src!,
+				title,
+				loading: "lazy",
+				allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+				referrerpolicy: "strict-origin-when-cross-origin",
+				allowfullscreen: "",
+			},
+		});
+	}
+
+	/** The linked page of a PDF, drawn in the background; its top shows. */
+	private renderPdfPage(media: HTMLElement, attachment: Attachment): void {
+		media.addClass("vtl-card-media--pdf");
+		// If the card is unmounted before the page is drawn, this fills a detached element: harmless.
+		renderPdfPage(this.host.app, attachment.file!, pageOf(attachment.subpath)).then(
+			(src) => media.createEl("img", { attr: { src, alt: "" } }),
+			(error: unknown) => {
+				console.error("Vertical Timeline: couldn't draw", attachment.file!.path, error);
+				media.createDiv({ cls: "vtl-card-empty", text: `Couldn't show ${attachment.name}` });
+			},
+		);
 	}
 
 	/** Fit and full-screen buttons, top right. */
@@ -370,6 +440,17 @@ export class TimelineBlock extends MarkdownRenderChild {
 			item.createEl("code", { text: error.text });
 		}
 	}
+}
+
+type CardPreview = "image" | "note" | "video" | "pdf";
+
+/** A guess at a full card's height, from its description and what its attachment shows. */
+function estimatedHeight(description: string, preview: CardPreview | null): number {
+	const paragraphs = description ? description.split("\n\n") : [];
+	const lines = paragraphs.flatMap((p) => p.split("\n")).reduce((n, line) => n + Math.ceil(line.length / LINE_CHARS), 0);
+	const extra = Math.max(0, lines - 1) * LINE_HEIGHT + Math.max(0, paragraphs.length - 1) * PARAGRAPH_GAP;
+	const base = !preview ? ESTIMATED_HEIGHT.text : preview === "note" ? ESTIMATED_HEIGHT.note : ESTIMATED_HEIGHT.media;
+	return base + extra;
 }
 
 /** vertical-timeline's canvas colors, from the Obsidian theme. */

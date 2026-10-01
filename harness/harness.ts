@@ -5,7 +5,7 @@ import { TimelineBlock, TimelineHost } from "../src/timelineBlock";
 const app = createApp([
 	new TFile("Projects/Atlas.md", "# Project Atlas\n\nKick-off with the **whole** team. Budget lives in [[Budget]].\n\n- Scope agreed\n- Owners assigned\n- Risks logged\n\n## Milestones\n\nShip the first prototype by May, then iterate with the pilot customers until the summer.\n\n## Retro\n\nWent well overall."),
 	new TFile("flat.jpg", "", "flat.svg"),
-	new TFile("contract.pdf", "", "", 248_512),
+	new TFile("contract.pdf", "", "/test-vault/attachments/contract.pdf", 248_512),
 ]) as any;
 
 const host: TimelineHost = {
@@ -43,7 +43,10 @@ const blocks: Record<string, string> = {
 - [1962-10-16] {Cuba} Cuban Missile Crisis
 - [1969-07-20] #cyan {USA} Apollo 11 Moon landing
 - [1979-12-24~1989-02-15] #firebrick {USSR} Soviet-Afghan War
-- [1989-11-09] {Europe} Fall of the Berlin Wall`,
+- [1989-11-09] {Europe} Fall of the Berlin Wall
+= [1961-08-13] {Europe} Berlin Wall built
+= [1957-10-04] #firebrick Sputnik
+= [1991-12-26] End of the USSR`,
 	bce: `> MINIMAP off
 > HEIGHT 360
 > WINDOW -400~600
@@ -57,6 +60,15 @@ const blocks: Record<string, string> = {
 @ [1914~1918] #red WWI
 @ [1939~1945] #rgb(0 0 255 / 30%) WWII`,
 	many: many,
+	media: `> HEIGHT 640
+- [1969-07-20] #slategray Apollo 11 | The lunar module Eagle lands in the Sea of Tranquility.
+  Armstrong steps out six hours later.
+
+  Watch the landing: https://www.youtube.com/watch?v=S9HdPi9Ikhk&t=12s.
+
+  Third paragraph,
+  with a line break.
+- [1969-07-24] Splashdown | Columbia lands in the Pacific.`,
 };
 // Same source inside the wrappers Live Preview puts code blocks in (an editable region).
 blocks.livePreview = blocks.attachments;

@@ -18,12 +18,13 @@
 	],
 	"license": "MIT",
 	"dependencies": {
-		"@defaultusr/vertical-timeline": "^1.1.1"
+		"@defaultusr/vertical-timeline": "^1.2.0"
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.3",
 		"esbuild": "^0.28.2",
 		"obsidian": "^1.13.1",
+		"pdfjs-dist": "^6.3.289",
 		"typescript": "^7.0.2",
 		"vitest": "^5.0.3"
 	}

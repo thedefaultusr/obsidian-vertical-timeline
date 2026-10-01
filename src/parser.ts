@@ -5,7 +5,9 @@ import { findLinks, indexOutsideWikilinks, ParsedLink, replaceLinksWithDisplay }
  * Parser for the timeline code block language:
  *
  *   - [Date~Date] #color {Storyline} !2 Title | Description   event (the end date is optional)
+ *       More description, indented under the event.         blank lines separate paragraphs
  *   @ [Date~Date] #color Label                                band: a background range
+ *   = [Date] #color {Storyline} Label                         marker: a labelled line at a moment
  *   # comment
  *   > FLAG value
  *
@@ -18,6 +20,7 @@ export interface TimelineEvent {
 	/** Present for spanning events; omitted for momentary ones. */
 	end?: TimelineDate;
 	title: string;
+	/** Paragraphs separated by `\n\n`; line breaks within a paragraph are kept as `\n`. */
 	description: string;
 	/** A CSS color as written (hex colors are normalised to start with `#`). */
 	color?: string;
@@ -37,7 +40,20 @@ export interface TimelineBand {
 	label?: string;
 }
 
-/** A `{Storyline}` used by at least one event. Storylines with a `> STORYLINE` flag come first. */
+/** A dashed line marking a moment, with an optional label. */
+export interface TimelineMarker {
+	id: string;
+	at: TimelineDate;
+	label?: string;
+	color?: string;
+	/** A marker in a storyline takes its color and counts toward its time extent. */
+	storyline?: string;
+}
+
+/**
+ * A `{Storyline}` used by at least one event or marker. Storylines with a `> STORYLINE` flag come
+ * first.
+ */
 export interface TimelineStoryline {
 	name: string;
 	color?: string;
@@ -63,6 +79,7 @@ export interface ParseError {
 export interface ParseResult {
 	events: TimelineEvent[];
 	bands: TimelineBand[];
+	markers: TimelineMarker[];
 	storylines: TimelineStoryline[];
 	flags: TimelineFlags;
 	errors: ParseError[];
@@ -73,7 +90,7 @@ export interface ParseOptions {
 	isColor?: (value: string) => boolean;
 }
 
-const LINE_RE = /^([-@])\s*\[([^\]]*)\]\s*(.*)$/;
+const LINE_RE = /^([-@=])\s*\[([^\]]*)\]\s*(.*)$/;
 const PRIORITY_RE = /^!(-?\d+)(?=\s|$)/;
 const HEX_RE = /^(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const DATE_FORMAT_HINT = "Use YYYY[-MM[-DD[Thh[:mm[:ss]]]]], negative years for BCE.";
@@ -104,6 +121,45 @@ function readColor(text: string, isColor: (value: string) => boolean): { color: 
 	return color ? { color, rest: text.slice(token.length + 1) } : null;
 }
 
+interface Modifiers {
+	color?: string;
+	storyline?: string;
+	priority?: number;
+}
+
+/**
+ * Reads the `#color`, `{Storyline}` and (if `withPriority`) `!n` modifiers at the start of an event
+ * or marker, in any order. Returns them and the text after them.
+ */
+function readModifiers(
+	text: string,
+	isColor: (value: string) => boolean,
+	withPriority: boolean,
+): { modifiers: Modifiers; rest: string } {
+	const modifiers: Modifiers = {};
+	let rest = text;
+	for (;;) {
+		rest = rest.trimStart();
+		if (rest.startsWith("{") && rest.includes("}")) {
+			const close = rest.indexOf("}");
+			modifiers.storyline = rest.slice(1, close).trim() || undefined;
+			rest = rest.slice(close + 1);
+			continue;
+		}
+		const priority = withPriority ? PRIORITY_RE.exec(rest) : null;
+		if (priority) {
+			modifiers.priority = parseInt(priority[1], 10);
+			rest = rest.slice(priority[0].length);
+			continue;
+		}
+		// One color each; a further #word is text (e.g. a tag).
+		const color = modifiers.color ? null : readColor(rest, isColor);
+		if (!color) return { modifiers, rest };
+		modifiers.color = color.color;
+		rest = color.rest;
+	}
+}
+
 /** Parses `[start~end]`; returns an error message if it isn't one or two valid dates. */
 function parseRange(text: string): { start: TimelineDate; end?: TimelineDate } | string {
 	const dates = text.split("~");
@@ -123,72 +179,85 @@ export function parseTimeline(source: string, options: ParseOptions = {}): Parse
 	const errors: ParseError[] = [];
 	const events: TimelineEvent[] = [];
 	const bands: TimelineBand[] = [];
+	const markers: TimelineMarker[] = [];
 	const fail = (line: number, message: string) => errors.push({ line, text: lines[line].trim(), message });
 
-	lines.forEach((raw, line) => {
+	for (let line = 0; line < lines.length; line++) {
+		const raw = lines[line];
 		const text = raw.trim();
-		if (!text || text.startsWith("#")) return;
+		if (!text || text.startsWith("#")) continue;
 		if (text.startsWith(">")) {
 			const error = parseFlag(text.slice(1).trim(), flags, storylines, isColor);
 			if (error) fail(line, error);
-			return;
+			continue;
 		}
 
 		const match = LINE_RE.exec(text);
 		if (!match) {
-			fail(line, "Unrecognised line. Events start with - and bands with @, followed by [date].");
-			return;
+			fail(line, "Unrecognised line. Events start with -, bands with @ and markers with =, followed by [date].");
+			continue;
 		}
 		const range = parseRange(match[2]);
 		if (typeof range === "string") {
 			fail(line, range);
-			return;
+			continue;
 		}
 		const { start, end } = range;
 
 		if (match[1] === "@") {
 			if (!end) {
 				fail(line, "A band needs a start and an end date: @ [start~end]");
-				return;
+				continue;
 			}
 			const rest = match[3].trim();
 			const color = readColor(rest, isColor);
 			if (!color && rest.startsWith("#")) {
 				fail(line, `"${rest.split(/\s/)[0]}" is not a color.`);
-				return;
+				continue;
 			}
 			const label = collapseSpaces(color ? color.rest : rest);
 			bands.push({ start, end, color: color?.color, label: label || undefined });
-			return;
+			continue;
 		}
 
-		const event: TimelineEvent = { id: `event-${events.length}`, start, end, title: "", description: "" };
-		let rest = match[3];
-		for (;;) {
-			rest = rest.trimStart();
-			if (rest.startsWith("{") && rest.includes("}")) {
-				const close = rest.indexOf("}");
-				event.storyline = rest.slice(1, close).trim() || undefined;
-				rest = rest.slice(close + 1);
+		if (match[1] === "=") {
+			if (end) {
+				fail(line, "A marker is a single moment: = [date] Label");
 				continue;
 			}
-			const priority = PRIORITY_RE.exec(rest);
-			if (priority) {
-				event.priority = parseInt(priority[1], 10);
-				rest = rest.slice(priority[0].length);
-				continue;
+			const { modifiers, rest } = readModifiers(match[3], isColor, false);
+			const label = collapseSpaces(replaceLinksWithDisplay(rest));
+			markers.push({ id: `marker-${markers.length}`, at: start, label: label || undefined, ...modifiers });
+			if (modifiers.storyline && !storylines.has(modifiers.storyline)) {
+				storylines.set(modifiers.storyline, { name: modifiers.storyline });
 			}
-			// One color per event; a further #word is part of the title (e.g. a tag).
-			const color = event.color ? null : readColor(rest, isColor);
-			if (!color) break;
-			event.color = color.color;
-			rest = color.rest;
+			continue;
 		}
+
+		const { modifiers, rest } = readModifiers(match[3], isColor, true);
+		const event: TimelineEvent = {
+			id: `event-${events.length}`,
+			start,
+			end,
+			title: "",
+			description: "",
+			...modifiers,
+		};
 		if (event.storyline && !storylines.has(event.storyline)) storylines.set(event.storyline, { name: event.storyline });
 
 		const pipe = indexOutsideWikilinks(rest, "|");
 		const title = (pipe === -1 ? rest : rest.slice(0, pipe)).trim();
-		let description = pipe === -1 ? "" : rest.slice(pipe + 1).trim();
+		const descriptionLines = pipe === -1 ? [] : [rest.slice(pipe + 1)];
+		// The description continues on the lines below that are indented further than the event,
+		// like a Markdown list item. Blank lines between them separate paragraphs.
+		const indent = indentOf(raw);
+		for (let next = line + 1; next < lines.length; next++) {
+			if (!lines[next].trim()) continue;
+			if (indentOf(lines[next]) <= indent) break;
+			descriptionLines.push(...lines.slice(line + 1, next + 1));
+			line = next;
+		}
+		let description = descriptionLines.join("\n");
 
 		const titleLink = findLinks(title)[0];
 		const descriptionLink = titleLink ? undefined : findLinks(description)[0];
@@ -197,15 +266,16 @@ export function parseTimeline(source: string, options: ParseOptions = {}): Parse
 		if (descriptionLink) description = description.replace(descriptionLink.raw, " ");
 
 		event.title = collapseSpaces(replaceLinksWithDisplay(title)) || start.text + (end ? ` ~ ${end.text}` : "");
-		event.description = collapseSpaces(replaceLinksWithDisplay(description));
+		event.description = paragraphs(replaceLinksWithDisplay(description));
 		events.push(event);
-	});
+	}
 
-	// A storyline flag for a storyline no event uses would draw an empty storyline.
-	const used = new Set(events.map((event) => event.storyline));
+	// A storyline flag for a storyline nothing uses would draw an empty storyline.
+	const used = new Set([...events, ...markers].map((item) => item.storyline));
 	return {
 		events,
 		bands,
+		markers,
 		storylines: [...storylines.values()].filter((storyline) => used.has(storyline.name)),
 		flags,
 		errors,
@@ -214,6 +284,19 @@ export function parseTimeline(source: string, options: ParseOptions = {}): Parse
 
 function collapseSpaces(text: string): string {
 	return text.replace(/\s+/g, " ").trim();
+}
+
+function indentOf(line: string): number {
+	return /^\s*/.exec(line)![0].length;
+}
+
+/** Normalises description text: paragraphs separated by `\n\n`, lines within them by `\n`. */
+function paragraphs(text: string): string {
+	return text
+		.split(/\n\s*\n/)
+		.map((paragraph) => paragraph.split("\n").map(collapseSpaces).filter(Boolean).join("\n"))
+		.filter(Boolean)
+		.join("\n\n");
 }
 
 /** Applies one flag line (without the leading `>`). Returns an error message, if any. */

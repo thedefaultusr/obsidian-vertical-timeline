@@ -15,6 +15,7 @@ const EXAMPLE = `\`\`\`${LANGUAGE}
 - [2024-03-01~2024-03-20] {Job} Contract | [[contract.pdf]]
 - [2024-04-10] {Home} Birthday
 - [2024-05-01] !3 Launch
+= [2024-04-01] #tomato Code freeze
 \`\`\``;
 
 export default class VerticalTimelinePlugin extends Plugin implements TimelineHost {

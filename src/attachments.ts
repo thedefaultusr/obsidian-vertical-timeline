@@ -1,7 +1,8 @@
 import { App, Keymap, Notice, PaneType, parseLinktext, TFile } from "obsidian";
 import type { ParsedLink } from "./links";
+import { youtubeEmbedUrl } from "./youtube";
 
-export type AttachmentKind = "note" | "image" | "file" | "url";
+export type AttachmentKind = "note" | "image" | "pdf" | "youtube" | "file" | "url";
 
 export interface Attachment {
 	kind: AttachmentKind;
@@ -10,7 +11,7 @@ export interface Attachment {
 	file: TFile | null;
 	/** Heading / block reference, including the leading `#`. */
 	subpath: string;
-	/** A `src` usable in an `<img>`, for images. */
+	/** A `src` for an `<img>` (images) or the player `<iframe>` (YouTube videos). */
 	src: string | null;
 	/** File name or URL, for display. */
 	name: string;
@@ -25,7 +26,7 @@ function extensionOf(path: string): string {
 	return dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
 }
 
-/** Works out what a link points to: a note, image or other file in the vault, or a URL. */
+/** Works out what a link points to: a note, image, PDF or other file in the vault, a YouTube video, or a URL. */
 export function resolveAttachment(app: App, link: ParsedLink, sourcePath: string): Attachment {
 	if (link.external) {
 		let pathname = link.target;
@@ -35,12 +36,13 @@ export function resolveAttachment(app: App, link: ParsedLink, sourcePath: string
 			// Not a parseable URL; use the raw target.
 		}
 		const image = IMAGE_EXTENSIONS.has(extensionOf(pathname));
+		const player = image ? null : youtubeEmbedUrl(link.target);
 		return {
-			kind: image ? "image" : "url",
+			kind: image ? "image" : player ? "youtube" : "url",
 			link,
 			file: null,
 			subpath: "",
-			src: image ? link.target : null,
+			src: image ? link.target : player,
 			name: link.target,
 		};
 	}
@@ -48,7 +50,13 @@ export function resolveAttachment(app: App, link: ParsedLink, sourcePath: string
 	const { path: linkpath, subpath } = parseLinktext(link.target);
 	const file = app.metadataCache.getFirstLinkpathDest(linkpath, sourcePath);
 	const extension = file ? file.extension.toLowerCase() : extensionOf(linkpath);
-	const kind: AttachmentKind = NOTE_EXTENSIONS.has(extension) ? "note" : IMAGE_EXTENSIONS.has(extension) ? "image" : "file";
+	const kind: AttachmentKind = NOTE_EXTENSIONS.has(extension)
+		? "note"
+		: IMAGE_EXTENSIONS.has(extension)
+			? "image"
+			: extension === "pdf"
+				? "pdf"
+				: "file";
 
 	return {
 		kind,

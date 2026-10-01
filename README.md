@@ -33,6 +33,7 @@ The command palette has **Insert timeline** and **Insert empty timeline**.
   the storyline's title down its side. Click the title to zoom to the storyline. Events without a
   storyline go in the main lane on the left.
 - **Bands** are colored background ranges, such as eras.
+- **Markers** are labelled dashed lines at a moment, such as "Lehman Brothers collapses".
 - A **minimap** on the left shows the whole timeline.
 
 ## Syntax
@@ -42,6 +43,7 @@ The command palette has **Insert timeline** and **Insert empty timeline**.
 | `- [date] Title \| Description` | Momentary event |
 | `- [date~date] Title \| Description` | Spanning event |
 | `@ [date~date] #color Label` | Band. The color and label are optional. |
+| `= [date] #color {Storyline} Label` | Marker. The color, storyline and label are optional. |
 | `# text` | Comment |
 | `> FLAG value` | Flag (see below) |
 
@@ -58,23 +60,57 @@ BCE (`[-550~-20]`). Ranges use `~`, not `-`.
 - `!n`: priority, a whole number (default 0). When zoomed out, cards of higher-priority events
   stay visible longer.
 
+**Descriptions** can go on for several paragraphs. Lines indented below an event, further than the
+event itself, continue its description, as in a Markdown list item. A blank line starts a new
+paragraph, and line breaks within a paragraph are kept:
+
+```vtimeline
+- [1969-07-20] Apollo 11 | The lunar module lands in the Sea of Tranquility.
+  Armstrong steps out six hours later.
+
+  Watch it: https://www.youtube.com/watch?v=S9HdPi9Ikhk
+- [1969-07-24] Splashdown
+```
+
+Descriptions are plain text. Indented lines under an event are always part of its description, even
+if they look like another event.
+
 Bands are drawn at 15% opacity, unless their color has its own alpha, e.g. `#rgb(233 49 71 / 25%)`.
+
+**Markers** take a single date and the same `#color` and `{Storyline}` modifiers as events. A marker's
+line starts at its storyline's rail (or the main lane) and runs across the timeline, behind the
+cards. A marker in a storyline takes the storyline's color and stretches its rail to include it.
+Clicking a marker's label zooms in around it.
+
+```vtimeline
+= [2008-09-15] {Financial crisis} Lehman Brothers collapses
+= [2020-03-11] #firebrick WHO declares a pandemic
+```
 
 ### Attachments
 
-The first link in an event's title or description is its attachment: a note, image, other file or
-URL. Wikilinks (`[[note]]`, `[[note#Heading|alias]]`), embeds (`![[photo.jpg]]`) and Markdown links
+The first link in an event's title or description is its attachment: a note, image, PDF, other file,
+YouTube video or URL. Wikilinks (`[[note]]`, `[[note#Heading|alias]]`), embeds (`![[photo.jpg]]`) and Markdown links
 (`[doc](files/a.pdf)`, `![](https://…/pic.png)`) all work. A link in the title shows its display
 text; a link in the description is hidden.
 
 An icon before the title shows what kind of attachment an event has. In a full card the title is a
 link to the attachment: click it to open it (Cmd/Ctrl-click or middle-click opens a new tab; a note
 that doesn't exist yet is created). In a compact card it isn't, so clicking anywhere on a compact
-card expands it. A full card also shows:
+card expands it.
 
-- a linked **note** is previewed: the start of the note, or just the `#heading` / `#^block` you
-  linked. Links in the preview work.
-- a linked **image** fills the card as its background, with the text on top.
+A linked **image**, **YouTube video** or **PDF** fills the top of a full card, edge to edge, in a
+16:9 frame above the date and title:
+
+- an image is cropped to fit.
+- a YouTube video plays in place. Links to `youtube.com/watch`, `youtu.be`, shorts, live streams and
+  embeds all work, and a start time (`t=90`, `t=1m30s`) is kept. The player is removed when the card
+  scrolls out of view or collapses, which stops the video.
+- a PDF shows the top of a page: the first, or the one you link to with `[[report.pdf#page=3]]`.
+  Pages are drawn with Obsidian's built-in PDF viewer and kept until the file changes.
+
+A linked **note** is previewed below the card's text: the start of the note, or just the
+`#heading` / `#^block` you linked. Links in the preview work.
 
 When you rename or move a linked file, links inside timeline blocks are updated.
 
@@ -82,7 +118,7 @@ When you rename or move a linked file, links inside timeline blocks are updated.
 
 | Flag | Effect |
 |---|---|
-| `> STORYLINE {name} #color` | Colors a storyline: its rail, its title, and its events that have no color of their own. |
+| `> STORYLINE {name} #color` | Colors a storyline: its rail, its title, and its events and markers that have no color of their own. |
 | `> HEIGHT 600` | Height in pixels (default 500, changeable in settings). |
 | `> HEIGHT fill` | As tall as the visible part of the note, following the pane as it's resized. |
 | `> WINDOW 1900~2000` | The range shown at first. Default: all events and bands. |
@@ -97,14 +133,15 @@ Lines that can't be read are listed under the timeline, with the reason.
   scrolls instead.
 - Ctrl/Cmd + scroll, or pinch, to zoom.
 - Click or drag in the minimap to jump.
+- Click a marker's label to zoom in around it.
 - The buttons at the top right (shown on hover) fit all events and switch to full screen (Esc
   leaves it). Full screen isn't available on iPhone, which only allows videos to go full screen.
 - When the timeline has focus: ↑ ↓ and Page Up / Down pan, + and - zoom, Esc clears the selection.
 
 ## Settings
 
-Height, minimap and card density defaults; note previews, image cards and attachment icons on or
-off; updating links on rename on or off.
+Height, minimap and card density defaults; note previews, image previews, PDF previews, YouTube videos
+and attachment icons on or off; updating links on rename on or off.
 
 ## Development
 
@@ -118,7 +155,8 @@ npm run harness   # bundle harness/ (serve the repo root, open harness/index.htm
 
 - `src/parser.ts` reads a code block; `src/timelineBlock.ts` turns the result into a
   vertical-timeline instance and renders its cards. `src/notePreview.ts` renders note previews,
-  `src/attachments.ts` resolves and opens links, and `src/linkUpdater.ts` rewrites links on rename.
+  `src/pdfPreview.ts` PDF pages and `src/youtube.ts` recognises YouTube links. `src/attachments.ts`
+  resolves and opens links, and `src/linkUpdater.ts` rewrites links on rename.
 - The canvas can't use CSS variables, so Obsidian theme colors (and colors like
   `#var(--color-red)`) are resolved to RGBA (`src/colors.ts`) and passed as vertical-timeline's
   `theme`. Card colors come from the `--vt-*` variables in `styles.css`. Timelines are rebuilt when

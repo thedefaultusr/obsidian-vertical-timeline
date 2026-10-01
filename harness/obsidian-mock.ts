@@ -80,6 +80,16 @@ export function parseLinktext(linktext: string) { const i = linktext.indexOf("#"
 export function resolveSubpath() { return null; }
 export const moment = { locale: () => "en" };
 
+/** Obsidian ships its own PDF.js; here it's loaded from node_modules (the harness serves the repo root). */
+export async function loadPdfJs() {
+	const base = "/node_modules/pdfjs-dist/build";
+	// A variable, so esbuild leaves the import to the browser instead of bundling it.
+	const url = `${base}/pdf.min.mjs`;
+	const pdfjs = await import(url);
+	pdfjs.GlobalWorkerOptions.workerSrc = `${base}/pdf.worker.min.mjs`;
+	return pdfjs;
+}
+
 export class TFile {
 	basename: string; extension: string; name: string;
 	stat = { size: 0, ctime: 0, mtime: 0 };
@@ -98,6 +108,7 @@ export function createApp(files: TFile[]) {
 		vault: {
 			getResourcePath: (f: TFile) => f.url,
 			cachedRead: async (f: TFile) => f.content,
+			readBinary: async (f: TFile) => (await fetch(f.url)).arrayBuffer(),
 		},
 		metadataCache: {
 			getFirstLinkpathDest: (p: string) => byName(p),

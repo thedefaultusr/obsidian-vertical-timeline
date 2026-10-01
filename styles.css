@@ -76,6 +76,17 @@
 
 /* ── Cards ──────────────────────────────────────────────────── */
 
+/* vertical-timeline's card padding, as a variable that edge-to-edge media can cancel out. */
+.vertical-timeline .vt-card {
+	--vtl-card-padding-x: 12px;
+	padding: 10px var(--vtl-card-padding-x);
+}
+
+.vertical-timeline .vt-card--compact {
+	--vtl-card-padding-x: 10px;
+	padding: 6px var(--vtl-card-padding-x);
+}
+
 .vertical-timeline .vt-card__title {
 	overflow-wrap: anywhere;
 }
@@ -121,51 +132,51 @@
 .vtl-card-description {
 	margin-top: var(--size-2-2);
 	color: var(--text-muted);
-	white-space: pre-wrap;
 }
 
-/* Image: the card's background, cropped to fill it, under a scrim that keeps the text legible. */
-.vt-card.vtl-card--image {
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-end;
-	min-height: 200px;
+.vtl-card-description p {
+	margin: 0;
+	/* Line breaks within a paragraph, as written. */
+	white-space: pre-line;
+}
+
+.vtl-card-description p + p {
+	margin-top: var(--size-4-2);
+}
+
+/* Media: an image, YouTube player or PDF page across the top of a full card, edge to edge. All
+   16:9, so a card doesn't change height when its media loads. */
+.vertical-timeline .vt-card.vtl-card--media {
+	padding-top: 0;
+	/* Clips the media to the card's rounded corners. */
 	overflow: hidden;
-	color: #fff;
-	text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
 }
 
-.vtl-card-image {
-	position: absolute;
-	inset: 0;
-	z-index: 0;
+.vtl-card-media {
+	/* Cancels the card's side padding, so the media reaches its borders. */
+	margin: 0 calc(-1 * var(--vtl-card-padding-x)) var(--size-4-2);
+	aspect-ratio: 16 / 9;
+	background: var(--background-secondary);
+}
+
+.vtl-card-media img,
+.vtl-card-media iframe {
+	display: block;
 	width: 100%;
 	height: 100%;
+	border: 0;
 	object-fit: cover;
 }
 
-.vtl-card--image::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	z-index: 1;
-	background: linear-gradient(to top, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.35) 45%, transparent 75%);
-	pointer-events: none;
+/* A page is taller than 16:9: its top shows. */
+.vtl-card-media--pdf img {
+	object-position: top;
+	background: #fff;
 }
 
-.vtl-card-body {
-	position: relative;
-	z-index: 2;
-}
-
-.vtl-card--image .vt-card__date,
-.vtl-card--image .vtl-card-description {
-	color: rgb(255 255 255 / 0.85);
-}
-
-.vtl-card--image .vtl-card-link,
-.vtl-card--image .vtl-card-link:hover {
-	color: #fff;
+.vtl-card-media .vtl-card-empty {
+	margin: 0;
+	padding: var(--size-4-3);
 }
 
 /* Note preview: the start of the linked note, faded out at the bottom. */

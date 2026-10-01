@@ -29,6 +29,8 @@ Cards show linked notes and images. Click an event's title to open its attachmen
 - [1962-10-16] !3 {Cuba} Cuban Missile Crisis
 - [1979-12-24~1989-02-15] #firebrick {USSR} Soviet-Afghan War
 - [1989-11-09] !5 {Europe} Fall of the Berlin Wall
+= [1961-08-13] {Europe} Berlin Wall built
+= [1957-10-04] #firebrick Sputnik
 - [1991-12-26] !5 Dissolution of the Soviet Union
 ```
 

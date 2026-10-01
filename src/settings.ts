@@ -7,6 +7,8 @@ export interface TimelineSettings {
 	density: number;
 	showImages: boolean;
 	showNotePreviews: boolean;
+	showVideos: boolean;
+	showPdfPreviews: boolean;
 	showAttachmentIcons: boolean;
 	updateLinksOnRename: boolean;
 }
@@ -19,6 +21,8 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	density: 1.25,
 	showImages: true,
 	showNotePreviews: true,
+	showVideos: true,
+	showPdfPreviews: true,
 	showAttachmentIcons: true,
 	updateLinksOnRename: true,
 };
@@ -72,11 +76,21 @@ export class TimelineSettingTab extends PluginSettingTab {
 			"Note previews",
 			"Show the start of a linked note (or the linked heading or block) in its event's card.",
 		);
-		this.toggle("showImages", "Image cards", "Show a linked image as the background of its event's card.");
+		this.toggle("showImages", "Image previews", "Show a linked image at the top of its event's card.");
+		this.toggle(
+			"showVideos",
+			"YouTube videos",
+			"Play a linked YouTube video inside its event's card. When off, the link opens YouTube instead.",
+		);
+		this.toggle(
+			"showPdfPreviews",
+			"PDF previews",
+			"Show the linked page of a PDF (the first, or #page=3) in its event's card.",
+		);
 		this.toggle(
 			"showAttachmentIcons",
 			"Attachment icons",
-			"Prefix the titles of events that link to a note, image, file or URL with an icon.",
+			"Prefix the titles of events that link to a note, image, PDF, video, file or URL with an icon.",
 		);
 		this.toggle(
 			"updateLinksOnRename",
